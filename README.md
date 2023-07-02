@@ -8,17 +8,17 @@ An Odoo-like serverless ORM using AWS DynamoDB
 To create a new model
 
 ``` python
-from base.Model import Model
+from models import Model
 
 
 class Users(Model):
     _name = 'Users'
+    _limit = 80 # define limit number of records to get from db
     _fields = [
         {
             'name': 'fieldName',
-            'type': 'S',
+            'type': 'S', # supported field types are Binary as B, Integer as N, String as S 
             'index': True, 
-            'default': 'String'
         }, ...
     ]
 ```
@@ -58,9 +58,9 @@ Currently available methods
         'field2',
         ....
     ]
-    someUsers = users.read(ids, fields) # returns list of dictionaries
+    someUsers = users.read(ids, fields) # returns recordset 
     for user in someUsers:
-        print(user.get('name'))
+        print(user.name)
 ```
 
 ### search
