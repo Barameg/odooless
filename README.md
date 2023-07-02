@@ -1,6 +1,6 @@
-# serverlessORM
+# Odooless
 
-An Odoo-like serverless ORM using AWS DynamoDB 
+An Odoo-like serverless ORM for AWS DynamoDB 
 
 
 ## Model
