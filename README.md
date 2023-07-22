@@ -1,5 +1,7 @@
 # Odooless
 
+![Build Status](https://github.com/Barameg/odooless/actions/workflows/build/badge.svg)
+
 An Odoo-like serverless ORM for AWS DynamoDB 
 
 
