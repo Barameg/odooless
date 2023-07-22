@@ -5,23 +5,23 @@
 An Odoo-like serverless ORM for AWS DynamoDB 
 
 
-## Model
+## Model Definition
 
 To create a new model
 
 ``` python
-from models import Model
+from odooless import models
 
 
-class Users(Model):
-    _name = 'Users'
-    _limit = 80 # define limit number of records to get from db
+class Users(models.Model):
+    _name = 'Users' # dynamodb table name
+    _limit = 80 # define default limit number of records to get from db
     _fields = [
         {
             'name': 'fieldName',
             'type': 'S', # supported field types are Binary as B, Integer as N, String as S 
-            'index': True, 
-        }, ...
+            'index': True, # create global secondary index for this attribute
+        }, ... # attribute definition 
     ]
 ```
 
@@ -29,13 +29,13 @@ class Users(Model):
 Currently available methods
 ### create
 ``` python
-    from models import users
+    from models import Users
 
-    someUser = users.create({
+    someUser = Users().create({
         'key': 'value',
     }) # create single record
 
-    someUsers = users.create([
+    someUsers = Users().create([
         {
             'key': 'value',
         },
@@ -47,7 +47,7 @@ Currently available methods
 
 ### read
 ``` python
-    from models import users
+    from models import Users
 
     ids = [
         'UUID4',
@@ -60,25 +60,24 @@ Currently available methods
         'field2',
         ....
     ]
-    someUsers = users.read(ids, fields) # returns recordset 
+    someUsers = Users().read(ids, fields) # returns recordset 
     for user in someUsers:
         print(user.name)
 ```
 
 ### search
 ``` python
-    from models import users
+    from models import Users
 
     domain = [
-        ('field', '=', 'value'),
+        ('field1', '=', 'value0'),
+        ('field2', '>=', 'value1'),                                  
+        ('field3', '<=', 'value2'),                                  
+        ('field4', 'IN', ['value0', 'value1', 'value2',]),
+        ('field5', 'between', ['value0', 'value1',]),
         ....
     ] # currently simple query operators soon will add full polish-notation support
-    fields = [
-        'field1',
-        'field2',
-        ....
-    ]
-    someUsers = users.search(domain) # returns list of records
+    someUsers = users.search(field0=value, domain) # the search method takes index attribute name as a keyword parameter along with a domain that does not include this attribute and returns list of records
 
     for user in someUsers:
         print(user.name) 
@@ -86,25 +85,30 @@ Currently available methods
 
 ### search_read
 ``` python
-    from models import users
+    from models import Users
 
     domain = [
-        ('field', '=', 'value'),
+        ('field1', '=', 'value0'),
+        ('field2', '>=', 'value1'),
+        ('field3', '<=', 'value2'),
+        ('field4', 'IN', ['value0', 'value1', 'value2',]),
+        ('field5', 'between', ['value0', 'value1',]),
         ....
     ] # currently simple query operators soon will add full polish-notation support
+
     fields = [
         'field1',
         'field2',
         ....
     ]
-    someUsers = users.search(domain) # returns list of dictionaries
+    someUsers = Users().search_read(field0=value, domain, fields) # the search method takes index attribute name as a keyword parameter along with a domain that does not include this attribute and returns list of records
 
     for user in someUsers:
         print(user.name) 
 ```
 ### write
 ``` python
-    from models import users
+    from models import Users
 
     users.write({
         'id': 'UUIDv4'
@@ -122,7 +126,7 @@ Currently available methods
         },...
     ]) # you can update multiple records by passing id of record
 
-    someUser = users.read(ids)
+    someUser = Users().read(ids)
 
     for user in someUsers:
         user.write({
@@ -134,9 +138,9 @@ Currently available methods
 
 ### delete
 ``` python
-    from models import users
+    from models import Users
 
-    someUser = users.delete(ids) # you can delete single or multiple records
+    someUser = Users().delete(ids) # you can delete single or multiple records
 ```
 
 
