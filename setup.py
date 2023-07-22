@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='odooless',
-    version='0.1.2',
+    version='0.1.3',
     description='A DynamoDB ORM inspired by Odoo',
     long_description='A DynamoDB ORM inspired by Odoo',
     author='Sam Hasan',
