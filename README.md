@@ -5,6 +5,11 @@
 An Odoo-like serverless ORM for AWS DynamoDB 
 
 
+## Installation
+
+``` pip install odooless ```
+
+
 ## Model Definition
 
 To create a new model
