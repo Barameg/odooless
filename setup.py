@@ -7,7 +7,7 @@ setup(
     long_description='A DynamoDB ORM inspired by Odoo',
     author='Sam Hasan',
     author_email='sam@barameg.co',
-    url='https://github.com/Barameg/odooless',
+    url='https://github.com/Barameg/odooless.git',
     packages=find_packages(),
     classifiers=[
         'Development Status :: 3 - Alpha',
