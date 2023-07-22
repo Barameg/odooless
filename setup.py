@@ -20,7 +20,7 @@ setup(
     ],
     keywords='odooless',
     install_requires=[
-        boto3
+        'boto3'
         # List any dependencies your package needs
     ],
     python_requires='>=3.6',
