@@ -1,6 +1,6 @@
 import boto3
 import env
-
+import os
 
 aws_access_key = os.environ.get("aws_access_key")
 aws_secret_access_key = os.environ.get("aws_secret_access_key")
