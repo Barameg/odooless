@@ -389,8 +389,7 @@ class Model:
             if fields_to_create:
                 create_global_indexes(cls._name, fields_to_create)
         except Exception as e:
-            print(e)
-#            create_table(self._name, self._fields)
+            create_table(self._name, self._fields)
             raise Exception(e)
 
     def create(self, values):
