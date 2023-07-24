@@ -5,9 +5,9 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='odooless',
-    version='0.1.11',
+    version='0.1.12',
     description='A DynamoDB ORM inspired by Odoo',
-    long_description='A DynamoDB ORM inspired by Odoo',
+    long_description=long_description,
     author='Sam Hasan',
     author_email='sam@barameg.co',
     url='https://github.com/Barameg/odooless.git',
