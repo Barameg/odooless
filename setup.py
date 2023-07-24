@@ -5,9 +5,10 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='odooless',
-    version='0.1.12',
+    version='0.1.13',
     description='A DynamoDB ORM inspired by Odoo',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     author='Sam Hasan',
     author_email='sam@barameg.co',
     url='https://github.com/Barameg/odooless.git',
@@ -21,7 +22,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
-    keywords='odooless',
+    keywords='odooless, dynamodb, orm, odoo',
     install_requires=[
         'boto3'
         # List any dependencies your package needs
