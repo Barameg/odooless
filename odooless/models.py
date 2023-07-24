@@ -2,7 +2,7 @@ import time
 import uuid
 import json
 
-from clients import resource, client
+from odooless.clients import resource, client
 
 defaultFields = ['id', 'createdAt', 'updatedAt', 'deleted']
 
