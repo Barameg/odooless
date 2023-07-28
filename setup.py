@@ -5,7 +5,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='odooless',
-    version='0.1.14',
+    version='0.1.15',
     description='A DynamoDB ORM inspired by Odoo',
     long_description=long_description,
     long_description_content_type='text/markdown',
