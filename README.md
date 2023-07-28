@@ -9,6 +9,16 @@ An Odoo-like serverless ORM for AWS DynamoDB
 
 ``` pip install odooless ```
 
+## Getting Started
+
+Define AWS credentials as environment variables 
+
+```python
+import os
+os.environ['aws_access_key_id'] = 'aws_access_key_id'
+os.environ['aws_secret_access_key'] = 'aws_secret_access_key'
+os.environ['region_name'] = 'region_name'
+```
 
 ## Model Definition
 
