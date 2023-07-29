@@ -4,7 +4,12 @@ import json
 
 from odooless.clients import resource, client
 
-defaultFields = ['id', 'createdAt', 'updatedAt', 'deleted']
+defaultFields = [
+    'id',
+    'createdAt',
+    'updatedAt',
+#    'deleted'
+]
 
 
 def create_table(
@@ -37,6 +42,7 @@ def create_table(
                 Fields
             )
         )
+
         if indexFields:
             for field in indexFields:
                 AttributeDefinitions.append({
@@ -62,6 +68,25 @@ def create_table(
             )
             create_params['GlobalSecondaryIndexes'] = GlobalSecondaryIndexes
 
+        for field in defaultFields:
+            if field != 'id':
+                AttributeDefinitions.append({
+                    'AttributeName': field,
+                    'AttributeType': 'S'
+                })
+            create_params['GlobalSecondaryIndexes'].append({
+                'IndexName': f'{field}Index',
+                'KeySchema': [
+                    {
+                        'AttributeName': field,
+                        'KeyType': 'HASH'
+                    },
+                ],
+                'Projection': {
+                    'ProjectionType': 'ALL',
+                },
+            })
+        print(create_params['GlobalSecondaryIndexes'])
         table = resource.create_table(
             **create_params
         )
@@ -357,37 +382,6 @@ class Model:
             cls._table = resource.Table(cls._name)
             attribute_definitions = cls._table.attribute_definitions
             global_indexes = cls._table.global_secondary_indexes
-
-            tableFields = list(
-                map(
-                    lambda field: field.get('AttributeName'),
-                    attribute_definitions
-                )
-            )
-            fields_to_create = list(
-                filter(
-                    lambda field: field.get('name') not in tableFields and field.get('index'),
-                    cls._fields
-                )
-            )
-            modelFields = list(
-                map(
-                    lambda field: field.get('name'),
-                    cls._fields
-                )
-            )
-            if global_indexes:
-                indexes_to_delete = list(
-                    filter(
-                        lambda index: index.get('IndexName').replace('Index', '') not in modelFields,
-                        global_indexes
-                    )
-                )
-                if indexes_to_delete:
-                    remove_global_indexes(cls._name, indexes_to_delete)
-
-            if fields_to_create:
-                create_global_indexes(cls._name, fields_to_create)
         except Exception as e:
             create_table(cls._name, cls._fields)
 
@@ -584,7 +578,7 @@ class Model:
         ExpressionAttributeValues = {}
         for key, expression in enumerate(filter_expression):
             if key < len(filter_expression) - 1:
-                if isinstance(expression, list):
+                if isinstance(expression, list) or isinstance(expression, tuple):
                     attribute = expression[0]
                     operator = expression[1]
                     if operator in ['=', '<>', '<', '<=', '>', '>=']:
@@ -616,7 +610,7 @@ class Model:
                 if isinstance(expression, str) and expression.upper() in ['AND', 'OR']:
                     FilterExpression += f'{expression.upper()} '
             else:
-                if isinstance(expression, list):
+                if isinstance(expression, list) or isinstance(expression, tuple):
                     attribute = expression[0]
                     operator = expression[1]
                     if operator in ['=', '<>', '<', '<=', '>', '>=']:
@@ -712,6 +706,7 @@ class Model:
 
         response = cls._table.query(**query_params)
         for item in response.get('Items'):
+            print(item)
             cls.records.append(cls(**item))
         cls.LastEvaluatedKey = response.get('LastEvaluatedKey')
         return RecordSet(cls)
