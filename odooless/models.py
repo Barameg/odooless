@@ -398,6 +398,9 @@ class Model:
         return self._delete(ids)
 
     def search(self, domain=None, fields=None, offset=None, limit=None, sort='asc', **kwargs):
+        if 'id' not in fields:
+            fields = f'id, {fields}'
+        print(fields)
         if sort == 'asc':
             scan_index_forward = True
             return self._query(
