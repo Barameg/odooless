@@ -397,8 +397,8 @@ class Model:
     def delete(self, ids):
         return self._delete(ids)
 
-    def search(self, domain=None, fields=None, offset=None, limit=None, sort='asc', **kwargs):
-        if 'id' not in fields:
+    def search(self, domain=None, fields='', offset=None, limit=None, sort='asc', **kwargs):
+        if 'id' not in fields and fields != '':
             fields = f'id, {fields}'
         print(fields)
         if sort == 'asc':
