@@ -14,10 +14,13 @@ An Odoo-like serverless ORM for AWS DynamoDB
 Define AWS credentials as environment variables 
 
 ```python
-import os
-os.environ['aws_access_key_id'] = 'aws_access_key_id'
-os.environ['aws_secret_access_key'] = 'aws_secret_access_key'
-os.environ['region_name'] = 'region_name'
+from odooless import Model, DB
+
+DB._region_name = 'us-west-2' # AWS region
+DB._endpoint_url = 'http://localhost:8000' # Omit for AWS cloud DynamoDB
+DB._aws_access_key_id = 'test' # AWS access key id
+DB._aws_secret_access_key = 'test' # AWS secret access key
+
 ```
 
 ## Model Definition
@@ -64,20 +67,7 @@ Currently available methods
 ``` python
     from models import Users
 
-    ids = [
-        'UUID4',
-        'UUID4',
-        'UUID4',
-    ]
-
-    fields = [
-        'field1',
-        'field2',
-        ....
-    ]
-    someUsers = Users().read(ids, fields) # returns recordset 
-    for user in someUsers:
-        print(user.name)
+    someUsers = Users().read(id, fields) # returns recordset 
 ```
 
 ### search
@@ -90,8 +80,10 @@ Currently available methods
         ('field3', '<=', 'value2'),                                  
         ('field4', 'IN', ['value0', 'value1', 'value2',]),
         ('field5', 'between', ['value0', 'value1',]),
+        ('field5', 'contains', 'value'),
+        ('field5', 'begins_with', 'value'),
         ....
-    ] # currently simple query operators soon will add full polish-notation support
+    ] 
     someUsers = users.search(field0=value, domain) # the search method takes index attribute name as a keyword parameter along with a domain that does not include this attribute and returns list of records
 
     for user in someUsers:
@@ -107,7 +99,9 @@ Currently available methods
         ('field2', '>=', 'value1'),
         ('field3', '<=', 'value2'),
         ('field4', 'IN', ['value0', 'value1', 'value2',]),
-        ('field5', 'between', ['value0', 'value1',]),
+        ('field5', 'between', ['value0', 'value1']),
+        ('field5', 'contains', 'value'),
+        ('field5', 'begins_with', 'value'),
         ....
     ] # currently simple query operators soon will add full polish-notation support
 
