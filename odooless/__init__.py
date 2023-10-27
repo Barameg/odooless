@@ -118,6 +118,7 @@ class Model:
     _name = None
     _table = None
     _fields = []
+    _limit = 80
     _attribute_definitions = None
     _global_secondary_indexes = None
     _billing_mode = 'PAY_PER_REQUEST'
@@ -531,7 +532,7 @@ class Model:
             params['ProjectionExpression'] = ProjectionExpression
 
         if limit:
-            params['Limit'] = limit
+            params['Limit'] = limit if limit else cls._limit
 
         if offset:
             params['ExclusiveStartKey'] = {
