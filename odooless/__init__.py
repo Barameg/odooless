@@ -7,7 +7,8 @@ import copy
 DEFAULT_FIELDS = [
     'id',
     'createdAt',
-    'updatedAt'
+    'updatedAt',
+    'modelName'
 ]
 
 
@@ -56,6 +57,9 @@ class Record:
     def __init__(self, data):
         self._data = data
 
+    def __iter__(self):
+        return iter(self._data.items())
+
     def __getattr__(self, name):
         if name in self._data:
             return self._data[name]
@@ -68,11 +72,12 @@ class Record:
             super().__setattr__(name, value)
 
     def __str__(self):
-        return str(self._data)
+        return f'{self._data}'
 
-    # Add a custom method to support item assignment
-    def set_attribute(self, name, value):
-        self._data[name] = value
+
+    @classmethod
+    def _set_attribute(cls, name, value):
+        cls._data[name] = value
 
 class RecordSet:
     _model = None
@@ -98,8 +103,8 @@ class RecordSet:
     def create(self, records):
         return self._model._create(records)
 
-    def read(self, id):
-        return self._model.read(id)
+    def read(self, id, fields):
+        return self._model._read(id, fields)
 
     def update(self, records):
         return self._model.update(records)
@@ -150,18 +155,22 @@ class Model:
     def _init(cls):
         try:
             cls._db = DB.connect()
+        except Exception as e:
+            raise Exception(f'Could not connect to cloud')
+        try:
             cls._table = cls._db._resource.Table(cls._name)
             cls._attribute_definitions = cls._table.attribute_definitions
             cls._global_indexes = cls._table.global_secondary_indexes
         except Exception as e:
             cls._table = cls._create_table()
 
+    @classmethod
     def _create_table(
-        self,
+        cls,
     ):
         create_params = {
-            'TableName':self._name,
-            'BillingMode':self._billing_mode,
+            'TableName':cls._name,
+            'BillingMode':cls._billing_mode,
         }
         KeySchema = []
         AttributeDefinitions = []
@@ -192,14 +201,14 @@ class Model:
             })
 
 
-        for field in self._fields:
-            AttributeDefinitions.append({
-                'AttributeName': field.get('name'),
-                'AttributeType': field.get('type') if field.get('type') and field.get('type') in [
-                    'B', 'N'
-                ] else 'S'
-            })
+        for field in cls._fields:
             if field.get('index'):
+                AttributeDefinitions.append({
+                    'AttributeName': field.get('name'),
+                    'AttributeType': field.get('type') if field.get('type') and field.get('type') in [
+                        'B', 'N'
+                    ] else 'S'
+                })
                 GlobalSecondaryIndexes.append({
                     'IndexName': f'{field.get("name")}Index',
                     'KeySchema': [
@@ -217,13 +226,13 @@ class Model:
         create_params['GlobalSecondaryIndexes'] = GlobalSecondaryIndexes
 
         try:
-            self._table = self._db._resource.create_table(
+            cls._table = cls._db._resource.create_table(
                 **create_params
             )
-            self._table.wait_until_exists()
+            cls._table.wait_until_exists()
         except Exception as e:
             raise Exception(e)
-        return self._table
+        return cls._table
 
     @classmethod
     def _create(cls, records):
@@ -251,6 +260,7 @@ class Model:
                         record['id'] = str(uuid.uuid4())
                         record['createdAt'] = str(int(time.time()))
                         record['updatedAt'] = str(int(time.time()))
+                        record['modelName'] = cls._name
                         batch.put_item(Item=record)
                         record = Record(record)
                         cls._records.append(record)
@@ -276,6 +286,7 @@ class Model:
                 record['id'] = str(uuid.uuid4())
                 record['createdAt'] = str(int(time.time()))
                 record['updatedAt'] = str(int(time.time()))
+                record['modelName'] = cls._name
                 cls._table.put_item(Item=record)
                 record = Record(record)
                 cls._records.append(record)
@@ -289,7 +300,10 @@ class Model:
 
     @classmethod
     def _read(cls, id, fields=[]):
-        return cls._search(id=id, fields=fields)
+        records = cls._search(id=id, fields=fields)
+        if records:
+            return records[0]
+        return False
 
     def read(self, id, fields=[]):
         return self._read(id, fields)
@@ -307,8 +321,6 @@ class Model:
             
             if key == 0 and not isinstance(expression, list) and not isinstance(expression, tuple):
                 raise Exception(f'First Expression must be either list or tuple')
-            if expression[0] == 'id':
-                raise Exception(f'Field id can not be used in index')
             if key < len(domain) - 1:
                 if isinstance(expression, list) or isinstance(expression, tuple):
                     attribute = expression[0]
@@ -539,35 +551,28 @@ class Model:
                 'id': offset
             }
         
-        if kwargs:
-            first_key = next(iter(kwargs))
-            IndexName = f'{first_key}Index'
-            KeyConditionExpression = f'#{first_key} = :{first_key}'
-            params['IndexName'] = IndexName
-            params['KeyConditionExpression'] = KeyConditionExpression
-            if 'ExpressionAttributeNames' in params and 'ExpressionAttributeValues' in params:
-                params['ExpressionAttributeNames'][f'#{first_key}'] = f'{first_key}'
-                params['ExpressionAttributeValues'][f':{first_key}'] = kwargs[first_key]
-            else:
-                params['ExpressionAttributeNames'] = {}
-                params['ExpressionAttributeNames'][f'#{first_key}'] = f'{first_key}'
+        if not kwargs:
+            kwargs['modelName'] = cls._name
 
-                params['ExpressionAttributeValues'] = {}
-                params['ExpressionAttributeValues'][f':{first_key}'] = kwargs[first_key]
-            
-            if sort.lower() == 'desc':
-                params['ScanIndexForward'] = False
-            try:
-                response = cls._table.query(**params)
-            except Exception as e:
-                raise Exception(f'{e}')
-            cls._records = []
-            for item in response['Items']:
-                item = Record(item)
-                cls._records.append(item)
-            return RecordSet(cls)
+        first_key = next(iter(kwargs))
+        IndexName = f'{first_key}Index'
+        KeyConditionExpression = f'#{first_key} = :{first_key}'
+        params['IndexName'] = IndexName
+        params['KeyConditionExpression'] = KeyConditionExpression
+        if 'ExpressionAttributeNames' in params and 'ExpressionAttributeValues' in params:
+            params['ExpressionAttributeNames'][f'#{first_key}'] = f'{first_key}'
+            params['ExpressionAttributeValues'][f':{first_key}'] = kwargs[first_key]
+        else:
+            params['ExpressionAttributeNames'] = {}
+            params['ExpressionAttributeNames'][f'#{first_key}'] = f'{first_key}'
+
+            params['ExpressionAttributeValues'] = {}
+            params['ExpressionAttributeValues'][f':{first_key}'] = kwargs[first_key]
+        
+        if sort.lower() == 'desc':
+            params['ScanIndexForward'] = False
         try:
-            response =  cls._table.scan(**params)
+            response = cls._table.query(**params)
         except Exception as e:
             raise Exception(f'{e}')
         cls._records = []
@@ -575,6 +580,7 @@ class Model:
             item = Record(item)
             cls._records.append(item)
         return RecordSet(cls)
+
     
     def search(self, domain=[], fields=[], offset=None, limit=None, sort='asc', **kwargs):
         return self._search(domain=domain, fields=fields, offset=offset, limit=limit, sort=sort, **kwargs)
@@ -602,32 +608,44 @@ class Model:
                     ):
                         raise Exception(f'{key} does not exist')
                     if key not in DEFAULT_FIELDS:
-                        record[0].set_attribute(key, value)
-                record[0].set_attribute('updatedAt', str(int(time.time())))
-                batch.put_item(Item=record[0]._data)
+                        record.__setattr__(key, value)
+                record.__setattr__('updatedAt', str(int(time.time())))
+                batch.put_item(Item=record._data)
             return True
         except Exception as e:
             raise Exception(e)
     
     @classmethod
     def _write_multiple_records(cls, values):
+        ids = list(map(lambda v: v.get('id'), values))
+        if not ids:
+            return False
+        records = cls._search([
+            [
+                'id', 'in', ids
+            ]
+        ])
+        if not records:
+            return False
         try:
             with cls._table.batch_writer() as batch:
-                for item in values:
-                    record = cls._read(item.get('id'))
-                    for key, value in item.items():
-                        if key not in DEFAULT_FIELDS \
-                                and key not in list(map(
-                            lambda field: field.get('name'), cls._fields)
-                        ):
-                            raise Exception(f'{key} does not exist')
-                        if key not in DEFAULT_FIELDS:
-                            record[0].set_attribute(key, value)
-                    record[0].set_attribute('updatedAt', str(int(time.time())))
-                    batch.put_item(Item=record[0]._data)
+                for record in records:
+                    for item in values:
+                        if record.id == item.get('id'):
+                            for key, value in item.items():
+                                if key not in DEFAULT_FIELDS \
+                                        and key not in list(map(
+                                    lambda field: field.get('name'), cls._fields)
+                                ):
+                                    raise Exception(f'{key} does not exist')
+                                if key not in DEFAULT_FIELDS:
+                                    record.__setattr__(key, value)
+                            record.__setattr__('updatedAt', str(int(time.time())))
+                            batch.put_item(Item=record._data)
         except Exception as e:
             raise Exception(e)
-        
+        return True
+    
     @classmethod
     def _update(cls, records):
         if isinstance(records, list):
