@@ -194,7 +194,7 @@ class Model:
         GlobalSecondaryIndexes = []
 
         for field in DEFAULT_FIELDS:
-            if field == 'id':
+            if field._name == 'id':
                 KeySchema.append({
                     'AttributeName': field._name,
                     'KeyType': 'HASH'
@@ -205,7 +205,7 @@ class Model:
                 'AttributeType': field._type
             })
             GlobalSecondaryIndexes.append({
-                'IndexName': f'{field}Index',
+                'IndexName': f'{field._name}Index',
                 'KeySchema': [
                     {
                         'AttributeName': field._name,
@@ -241,7 +241,6 @@ class Model:
         create_params['KeySchema'] = KeySchema
         create_params['AttributeDefinitions'] = AttributeDefinitions
         create_params['GlobalSecondaryIndexes'] = GlobalSecondaryIndexes
-
         try:
             cls._table = cls._db._resource.create_table(
                 **create_params
@@ -705,4 +704,3 @@ class Model:
 
     def previous(self, last_evaluated_key):
         pass
-
