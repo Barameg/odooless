@@ -35,11 +35,14 @@ class Users(models.Model):
     _name = 'Users' # dynamodb table name
     _limit = 80 # define default limit number of records to get from db
     _fields = [
-        {
-            'name': 'fieldName',
-            'type': 'S', # supported field types are Binary as B, Integer as N, String as S 
-            'index': True, # create global secondary index for this attribute
-        }, ... # attribute definition 
+            Field(
+                name='id', 
+                index=True, 
+                hidden=False, 
+                string='ID',
+                type='S', # supported field types are Binary as B, Integer as N, String as S 
+                index=True # create global secondary index for this attribute
+            ),
     ]
 ```
 
