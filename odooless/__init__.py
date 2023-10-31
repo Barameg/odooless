@@ -4,13 +4,6 @@ import uuid
 import time
 import copy
 
-DEFAULT_FIELDS = [
-    'id',
-    'createdAt',
-    'updatedAt',
-    'modelName'
-]
-
 
 class Database:
     _service_name = "dynamodb"
@@ -119,6 +112,30 @@ class RecordSet:
     def delete(self, ids=[]):
         return self._model._delete(ids)
 
+class Field:
+    _name = None
+    _default = False
+    _hidden = False
+    _string = None
+    _type = 'S' # types available for DynamoDB are B, N, S
+    _index = False
+    
+    def __init__(self, name, default=False, hidden=False, string=None, type='S', index=False):
+        self._name = name
+        self._default = default
+        self._hidden = hidden
+        self._string = string
+        self._type = type
+        self._index = index
+
+DEFAULT_FIELDS = [
+    Field('id', index=True, hidden=False, string='ID'),
+    Field('createdAt', index=True, hidden=False, string='Created At'),
+    Field('updatedAt', index=True, hidden=False, string='Updated At'),
+    Field('modelName', index=True, hidden=True, string='Model')
+]
+
+
 class Model:
     _name = None
     _table = None
@@ -179,19 +196,19 @@ class Model:
         for field in DEFAULT_FIELDS:
             if field == 'id':
                 KeySchema.append({
-                    'AttributeName': field,
+                    'AttributeName': field._name,
                     'KeyType': 'HASH'
                 })
 
             AttributeDefinitions.append({
-                'AttributeName': field,
-                'AttributeType': 'S'
+                'AttributeName': field._name,
+                'AttributeType': field._type
             })
             GlobalSecondaryIndexes.append({
                 'IndexName': f'{field}Index',
                 'KeySchema': [
                     {
-                        'AttributeName': field,
+                        'AttributeName': field._name,
                         'KeyType': 'HASH'
                     },
                 ],
@@ -202,18 +219,18 @@ class Model:
 
 
         for field in cls._fields:
-            if field.get('index'):
+            if field._index:
                 AttributeDefinitions.append({
-                    'AttributeName': field.get('name'),
-                    'AttributeType': field.get('type') if field.get('type') and field.get('type') in [
+                    'AttributeName': field._name,
+                    'AttributeType': field._type if field._type and field._type in [
                         'B', 'N'
                     ] else 'S'
                 })
                 GlobalSecondaryIndexes.append({
-                    'IndexName': f'{field.get("name")}Index',
+                    'IndexName': f'{field._name}Index',
                     'KeySchema': [
                         {
-                            'AttributeName': field.get('name'),
+                            'AttributeName': field._name,
                             'KeyType': 'HASH'
                         },
                     ],
@@ -238,14 +255,14 @@ class Model:
     def _create(cls, records):
         cls._table = cls._db._resource.Table(cls._name)
         cls._records = []
-        required_fields = list(filter(lambda field: field.get('required'), cls._fields))
-        existingFields = list(map(lambda field: field.get('name'), cls._fields))
+        required_fields = list(filter(lambda field: field._required, cls._fields))
+        existingFields = list(map(lambda field: field._name, cls._fields))
         if isinstance(records, list):
             # check required fields
             for record in records:
                 for required_field in required_fields:
-                    if required_field.get('name') not in record:
-                        raise Exception(f'Missing required field: {required_field.get("name")}')
+                    if required_field._name not in record:
+                        raise Exception(f'Missing required field: {required_field._name}')
             # check non existing and default fields
             for record in records:
                 for key, val in record.items():
@@ -271,8 +288,8 @@ class Model:
             record = records
             # check required fields
             for required_field in required_fields:
-                if required_field.get('name') not in record:
-                    raise Exception(f'Missing required field: {required_field.get("name")}')
+                if required_field._name not in record:
+                    raise Exception(f'Missing required field: {required_field._name}')
             
             # check non existing and default fields
             for key, val in record.items():
@@ -604,7 +621,7 @@ class Model:
                 for key, value in values.items():
                     if key not in DEFAULT_FIELDS \
                             and key not in list(map(
-                        lambda field: field.get('name'), cls._fields)
+                        lambda field: field._name, cls._fields)
                     ):
                         raise Exception(f'{key} does not exist')
                     if key not in DEFAULT_FIELDS:
@@ -635,7 +652,7 @@ class Model:
                             for key, value in item.items():
                                 if key not in DEFAULT_FIELDS \
                                         and key not in list(map(
-                                    lambda field: field.get('name'), cls._fields)
+                                    lambda field: field._name, cls._fields)
                                 ):
                                     raise Exception(f'{key} does not exist')
                                 if key not in DEFAULT_FIELDS:
